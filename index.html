@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --accent: #a5d0d4;
+  --accent-dim: rgba(165,208,212,0.12);
+  --accent-border: rgba(165,208,212,0.3);
+  --bg: #080a0b;
+  --panel-bg: rgba(10,13,15,0.84);
+  --panel-border: rgba(255,255,255,0.07);
+  --text: #e2e6e8;
+  --text-muted: rgba(226,230,232,0.45);
+  --font: 'Montserrat', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: var(--font); color: var(--text); user-select: none; }
+
+/* ── BACKGROUND ── */
+#bg { position: fixed; inset: 0; z-index: 0; }
+#bg-video { width:100%; height:100%; object-fit:cover; opacity:0.5; display:none; }
+.slide { position:absolute; inset:0; background-size:cover; background-position:center; opacity:0; transition:opacity 1.4s ease; }
+.slide.active { opacity:0.5; }
+#bg::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: linear-gradient(to bottom, rgba(8,10,11,0.6) 0%, rgba(8,10,11,0.1) 22%, rgba(8,10,11,0.1) 72%, rgba(8,10,11,0.88) 100%);
+}
+
+/* ── SCREEN ── */
+#screen { position:relative; z-index:1; width:100vw; height:100vh; display:flex; flex-direction:column; }
+
+/* ── TOP BAR — fixed, full width row ── */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 72px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  pointer-events: none;
+}
+#topbar > * { pointer-events: all; }
+#brand { display:flex; align-items:center; gap:14px; }
+#brand-logo { height:52px; width:auto; max-width:60px; object-fit:contain; filter:drop-shadow(0 0 10px rgba(165,208,212,0.25)); }
+#brand-line1 { font-size:16px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); line-height:1.2; }
+#brand-line2 { font-size:16px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); line-height:1.2; }
+
+/* socials pill */
+#socials {
+  display: flex; gap: 3px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 4px;
+  backdrop-filter: blur(16px);
+  align-items: center;
+}
+.soc-btn {
+  display:flex; align-items:center; gap:7px;
+  padding: 7px 16px;
+  border-radius: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-muted); background: transparent; border: none;
+  cursor: pointer; text-decoration: none;
+  transition: all 0.2s; white-space: nowrap;
+}
+.soc-btn.icon-only { padding: 7px 11px; }
+.soc-btn i { font-size:14px; line-height:1; }
+.soc-btn:hover { background:var(--accent-dim); color:var(--accent); }
+
+/* ── TABS — centered in same row, same height as topbar ── */
+#tabs-section {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 72px;
+  display: flex;
+  align-items: center;
+  z-index: 51;
+}
+#tabs-wrap {
+  display: flex; gap: 3px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 4px;
+  backdrop-filter: blur(16px);
+}
+.tab-btn {
+  display:flex; align-items:center; gap:7px;
+  padding: 7px 18px;
+  border-radius: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-muted); background: transparent; border: none; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.tab-btn svg { flex-shrink:0; opacity:0.5; }
+.tab-btn.active { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-border); }
+.tab-btn.active svg { opacity:1; }
+.tab-btn:hover:not(.active) { color:var(--text); background:rgba(255,255,255,0.04); }
+
+/* ── PANEL AREA ── */
+#panel-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* top padding accounts for topbar height + tabs height so panel sits below tabs */
+  padding: 110px 28px 8px;
+  min-height: 0;
+}
+
+/* ── CONTENT PANEL ── */
+#content-panel {
+  width: 720px;
+  max-width: 92vw;
+  transition: width 0.3s ease;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  backdrop-filter: blur(22px);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 200px);
+  /* overflow visible so keyboard top-row tooltips aren't clipped */
+  overflow: visible;
+  position: relative;
+}
+/* accent line — separate element since overflow:visible means ::before could bleed */
+#panel-top-line {
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--accent), transparent);
+  border-radius: 14px 14px 0 0;
+  flex-shrink: 0;
+}
+/* inner clip for scrollable panels only */
+#panel-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0 0 14px 14px;
+  overflow: hidden;
+}
+
+.panel { display:none; flex-direction:column; }
+.panel.active { display:flex; }
+.panel.scrollable { flex:1; min-height:0; }
+.panel-scroll { flex:1; overflow-y:auto; padding:18px 22px 22px; scrollbar-width:thin; scrollbar-color:var(--accent-border) transparent; }
+.panel-scroll::-webkit-scrollbar { width:3px; }
+.panel-scroll::-webkit-scrollbar-thumb { background:var(--accent-border); border-radius:2px; }
+
+/* ── CHANGELOG ── */
+.cl-card { background:rgba(255,255,255,0.025); border:1px solid var(--panel-border); border-radius:10px; padding:14px 16px; margin-bottom:9px; }
+.cl-card:last-child { margin-bottom:0; }
+.cl-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+.cl-title { font-size:13px; font-weight:700; color:var(--text); }
+.cl-date { font-size:10px; font-weight:600; color:var(--text-muted); flex-shrink:0; margin-left:12px; }
+.cl-tag { font-size:11px; font-weight:600; color:var(--accent); margin-bottom:7px; }
+.cl-desc { font-size:11.5px; color:var(--text-muted); line-height:1.65; }
+
+/* ── STAFF CAROUSEL ── */
+#staff-carousel { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px 36px; min-height:480px; }
+.staff-track-wrap { width:100%; overflow:hidden; }
+.staff-track { display:flex; transition:transform 0.5s cubic-bezier(0.4,0,0.2,1); }
+.staff-slide { min-width:100%; display:flex; flex-direction:column; align-items:center; gap:0; padding:0 8px; }
+.staff-big-avatar { width:110px; height:110px; border-radius:10px; object-fit:cover; object-position:center top; margin-bottom:20px; }
+.staff-big-initials { width:110px; height:110px; border-radius:10px; background:var(--accent-dim); display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:800; color:var(--accent); margin-bottom:20px; }
+.staff-slide-name { font-size:18px; font-weight:800; color:var(--text); margin-bottom:8px; }
+.staff-slide-role { font-size:10px; font-weight:700; color:var(--accent); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:18px; }
+.staff-slide-bio { font-size:12px; color:var(--text-muted); text-align:center; line-height:1.75; margin-bottom:22px; padding:0 4px; }
+.staff-slide-link { font-size:10px; color:var(--text-muted); text-decoration:none; border:1px solid var(--panel-border); border-radius:5px; padding:5px 16px; transition:all 0.2s; }
+.staff-slide-link:hover { color:var(--accent); border-color:var(--accent-border); }
+.staff-nav { display:flex; align-items:center; gap:14px; margin-top:28px; }
+.snav-btn { width:30px; height:30px; border-radius:50%; border:1px solid var(--accent-border); background:var(--accent-dim); color:var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.2s; }
+.snav-btn:hover { background:var(--accent); color:#080a0b; }
+.staff-dots { display:flex; gap:6px; align-items:center; }
+.sdot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.15); cursor:pointer; transition:all 0.3s; }
+.sdot.active { background:var(--accent); width:18px; border-radius:3px; }
+
+/* ── RULES ── */
+.rule-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.rule-item:last-child { border-bottom:none; }
+.rule-num { min-width:24px; height:24px; border-radius:5px; background:var(--accent-dim); border:1px solid var(--accent-border); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:var(--accent); flex-shrink:0; margin-top:1px; }
+.rule-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.rule-desc { font-size:11.5px; color:var(--text-muted); line-height:1.6; }
+
+/* ── KEYBOARD ── */
+#panel-keyboard {
+  /* keyboard panel needs overflow visible for tooltips */
+  overflow: visible !important;
+}
+#kb-outer {
+  padding: 28px 20px 22px;
+  overflow: visible;
+}
+#keyboard-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; overflow:visible; }
+.kb-row { display:flex; gap:5px; justify-content:center; overflow:visible; }
+.key {
+  min-width: 40px; height: 40px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: var(--text-muted);
+  cursor: default;
+  position: relative;
+  padding: 0 5px; white-space: nowrap;
+  transition: all 0.15s;
+  overflow: visible;
+}
+.key.bound { border-color:var(--accent-border); background:var(--accent-dim); color:var(--accent); }
+.key.wide  { min-width: 60px; }
+.key.wider { min-width: 74px; }
+.key.widest { min-width: 180px; }
+
+.key-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(4,6,8,0.97);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 10px; font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 999;
+}
+.key-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--accent-border);
+}
+.key:hover .key-tooltip { opacity: 1; }
+
+/* ── MUSIC PLAYER ── */
+#music-player {
+  position: fixed; bottom: 74px; left: 26px; z-index: 10;
+  background: rgba(8,10,12,0.93);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px; width: 290px;
+  backdrop-filter: blur(18px);
+  display: none; overflow: hidden;
+}
+#music-player::before { content:''; display:block; height:2px; background:linear-gradient(to right, transparent, var(--accent), transparent); }
+#music-player.visible { display:block; }
+#music-inner { padding: 13px 16px 15px; }
+#music-track { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; }
+#music-artist { font-size:10px; color:var(--text-muted); margin-bottom:12px; }
+
+#seek-row { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+#t-cur, #t-dur { font-size:9px; color:var(--text-muted); flex-shrink:0; min-width:28px; }
+#t-dur { text-align:right; }
+#music-seek { flex:1; accent-color:var(--accent); cursor:pointer; }
+
+#ctrl-row { display:flex; align-items:center; gap:10px; }
+#ctrl-btns { display:flex; align-items:center; gap:7px; }
+.mc-btn { background:none; border:none; cursor:pointer; padding:4px; color:var(--text-muted); display:flex; align-items:center; transition:color 0.15s; }
+.mc-btn:hover { color:var(--accent); }
+.mc-pp { width:32px; height:32px; border-radius:50%; background:var(--accent-dim); border:1px solid var(--accent-border); color:var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.15s; flex-shrink:0; }
+.mc-pp:hover { background:var(--accent); color:#080a0b; }
+
+/* volume — simple row, no wrapper box */
+#vol-row {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+}
+#mute-btn {
+  background: none; border: none; cursor: pointer;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; padding: 0;
+  transition: opacity 0.15s;
+  width: 20px; height: 20px;
+  opacity: 0.85;
+}
+#mute-btn:hover { opacity: 1; }
+#mute-btn.muted { opacity: 0.35; }
+#vol-slider { flex:1; accent-color:var(--accent); cursor:pointer; min-width:0; }
+
+audio { display:none; }
+
+/* ── BOTTOM BAR ── */
+#bottombar { flex-shrink:0; padding:0 28px 18px; }
+#loading-label { font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-muted); margin-bottom:7px; text-align:center; }
+#loading-label span { color:var(--accent); }
+#progress-track { width:100%; height:2px; background:rgba(255,255,255,0.07); border-radius:1px; overflow:hidden; }
+#progress-fill { height:100%; background:var(--accent); border-radius:1px; width:0%; transition:width 0.35s ease; box-shadow:0 0 8px rgba(165,208,212,0.35); }
+#progress-meta { display:flex; justify-content:space-between; margin-top:5px; }
+#progress-status, #progress-pct { font-size:9px; color:var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ===================== EDIT CONFIG HERE ===================== -->
+<script>
+const CONFIG = {
+
+  accentColor: '#ca1aff',
+
+  serverLine1: 'Your Server Name',
+  serverLine2: 'Roleplay', // accent color!
+  logoSrc: 'assets/logo.png',
+
+  backgroundType: 'video',  // 'slideshow' | 'video'
+  videoSrc: 'assets/bg.mp4',
+  slides: [
+    'assets/slide1.jpg',
+    'assets/slide2.jpg',
+    'assets/slide3.jpg',
+  ],
+  slideInterval: 7000,
+
+  // loading bar messages — one is picked at random each time
+  loadingMessages: [
+    'The city is now loading...',
+    'Getting the streets ready...',
+    'Waking up the city...',
+    'Checking your pockets...',
+    'Bribing the spawn system...',
+    'Loading the good stuff...',
+    'Almost in the city...',
+    'Polishing the skyline...',
+    // add as many as you want
+  ],
+
+  music: {
+    enabled: true,   // true | false
+    volume: 0.5,
+    shuffle: true,  // true | false
+    tracks: [
+      { src: 'assets/song1.mp3', trackName: 'Song-Name', artist: 'Artist-Name' },
+      { src: 'assets/song2.mp3', trackName: 'Song-Name', artist: 'Artist-Name' },
+      { src: 'assets/song3.mp3', trackName: 'Song-Name', artist: 'Artist-Name' },
+      { src: 'assets/song4.mp3', trackName: 'Song-Name', artist: 'Artist-Name' },
+      // add as many as you want
+    ],
+  },
+
+  socials: [
+    { enabled: true,  icon: 'fa-discord',  label: 'Discord', url: 'https://discord.gg/YourDiscordLink' },  // enabled: true | false
+    { enabled: true,  icon: 'fa-globe',    label: 'Website', url: 'https://yoursite.com' },          // icon: any Font Awesome icon e.g. fa-discord
+    { enabled: true,  icon: 'fa-store',    label: 'Tebex',   url: 'https://discord.gg/YourTebexLink' },          // label: 'Text' | '' (empty = icon only)
+    { enabled: true,  icon: 'fa-tiktok',   label: 'TikTok',  url: 'https://tiktok.com/@yourpage' },
+  ],
+
+  tabs: {
+    changelog: { enabled: true, label: 'Updates',  icon: 'updates'  },  // enabled: true | false
+    staff:     { enabled: true, label: 'Team',     icon: 'team'     },  // enabled: true | false
+    rules:     { enabled: true, label: 'Rules',    icon: 'rules'    },  // enabled: true | false
+    commands:  { enabled: true, label: 'Commands', icon: 'commands' },  // enabled: true | false
+    keyboard:  { enabled: true, label: 'Keybinds', icon: 'keyboard' },  // enabled: true | false
+  },
+
+  changelog: [
+    { date: '23 Mar, 2026', title: 'Loading Screen',    tag: 'New Feature',    description: 'New loading screen built from the ground up with the a sleek aesthetic in mind.' },
+    { date: '10 February, 2026', title: 'Job Manager App',   tag: 'New Feature',    description: 'Manage job ranks and staff, and view hours directly from your phone.' },
+  ],
+
+  staff: [
+    { name: 'Staff Name', role: 'Owner',     bio: 'Server Owner& Founder.', image: '', link: '' },
+    { name: 'Staff Name', role: 'Admin',     bio: 'Head of moderators.', image: '', link: '' },
+    { name: 'Staff Name', role: 'Moderator', bio: 'First point of contact for player support and reports.', image: '', link: '' },
+    { name: 'Staff Name', role: 'Developer', bio: 'Working behind the scenes to bring new features to life.', image: '', link: '' },
+  ],
+
+  rules: [
+    { title: 'Respect All Players', description: 'Treat everyone with respect. Harassment, discrimination, or toxicity of any kind will result in punishment.' },
+    { title: 'No Metagaming',       description: 'Do not use out-of-character information to influence in-character decisions.' },
+    { title: 'No Powergaming',      description: 'Do not force actions on other players or do things that would be realistically impossible.' },
+    { title: 'Value Your Life',     description: 'Act as if your character values their life. Avoid reckless behaviour when under threat.' },
+    { title: 'No RDM / VDM',        description: 'Do not randomly kill or run over players without valid roleplay reason.' },
+    { title: 'Stay In Character',   description: 'Remain in character at all times.' },
+  ],
+
+  commands: [
+    { command: '/me',       description: 'Perform a roleplay action visible to nearby players.' },
+    { command: '/do',       description: 'Describe something happening in the environment around you.' },
+    { command: '/ooc',      description: 'Send an out-of-character message to all players.' },
+    { command: '/hudsettings',     description: 'Open the hud settings menu to customize your ui.' },
+    { command: '/carry',    description: 'Carry another player. They must consent first.' },
+    { command: '/bank',     description: 'Check your bank balance.' },
+    { command: '/cash',     description: 'Check your cash on hand.' },
+    { command: '/inventory',description: 'Open your inventory.' },
+    // add as many as you want
+  ],
+
+  keybinds: {
+    'F1':'Open Phone',    'F2':'Open Inventory', 'F3':'Emote Menu',
+    'F5':'Radial Menu',   'F6':'Job Menu',        'F9':'10-Codes Panel',
+    'Z':'Push-to-Talk',   'X':'Hands Up',         'G':'Grab / Carry',
+    'B':'Seatbelt',       'L':'Engine On/Off',    'E':'Interact',
+    'CAPS':'Radio',
+  },
+};
+</script>
+<!-- ==================== END CONFIG ==================== -->
+
+<div id="bg">
+  <video id="bg-video" autoplay loop muted playsinline></video>
+  <div id="bg-slideshow"></div>
+</div>
+
+<div id="screen">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div id="brand">
+      <img id="brand-logo" src="" alt="logo">
+      <div>
+        <div id="brand-line1"></div>
+        <div id="brand-line2"></div>
+      </div>
+    </div>
+    <div id="socials"></div>
+  </div>
+
+  <!-- TABS — fixed position, always top center -->
+  <div id="tabs-section">
+    <div id="tabs-wrap"></div>
+  </div>
+
+  <!-- PANEL AREA -->
+  <div id="panel-area">
+    <div id="content-panel">
+      <div id="panel-top-line"></div>
+      <div id="panel-inner">
+
+        <div id="panel-changelog" class="panel scrollable">
+          <div class="panel-scroll" id="changelog-list"></div>
+        </div>
+
+        <div id="panel-staff" class="panel">
+          <div id="staff-carousel">
+            <div class="staff-track-wrap">
+              <div class="staff-track" id="staff-track"></div>
+            </div>
+            <div class="staff-nav">
+              <div class="snav-btn" id="snav-prev">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </div>
+              <div class="staff-dots" id="staff-dots"></div>
+              <div class="snav-btn" id="snav-next">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="panel-rules" class="panel scrollable">
+          <div class="panel-scroll" id="rules-list"></div>
+        </div>
+
+        <div id="panel-commands" class="panel scrollable">
+          <div class="panel-scroll" id="commands-list"></div>
+        </div>
+
+        <!-- keyboard panel: overflow visible so top-row tooltips aren't clipped -->
+        <div id="panel-keyboard" class="panel" style="overflow:visible;">
+          <div id="kb-outer"><div id="keyboard-wrap"></div></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MUSIC -->
+  <div id="music-player">
+    <div id="music-inner">
+      <div id="music-track"></div>
+      <div id="music-artist"></div>
+      <div id="seek-row">
+        <span id="t-cur">0:00</span>
+        <input type="range" id="music-seek" min="0" max="100" value="0" step="0.1">
+        <span id="t-dur">0:00</span>
+      </div>
+      <div id="ctrl-row">
+        <div id="ctrl-btns">
+          <button class="mc-btn" id="mc-back">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.67"/></svg>
+          </button>
+          <div class="mc-pp" id="mc-play">
+            <svg id="icon-play"  viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            <svg id="icon-pause" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </div>
+          <button class="mc-btn" id="mc-fwd">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.67"/></svg>
+          </button>
+        </div>
+        <div id="vol-row">
+          <button id="mute-btn" title="Mute / Unmute">
+            <svg id="vol-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+            <svg id="vol-off" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          </button>
+          <input type="range" id="vol-slider" min="0" max="1" step="0.01" value="0.5">
+        </div>
+      </div>
+    </div>
+    <audio id="audio-el"></audio>
+  </div>
+
+  <!-- BOTTOM -->
+  <div id="bottombar">
+    <div id="loading-label"></div>
+    <div id="progress-track"><div id="progress-fill"></div></div>
+    <div id="progress-meta">
+      <div id="progress-status">Connecting to server...</div>
+      <div id="progress-pct">0%</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const h2r=(hex,a)=>{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;};
+document.documentElement.style.setProperty('--accent',CONFIG.accentColor);
+document.documentElement.style.setProperty('--accent-dim',h2r(CONFIG.accentColor,0.12));
+document.documentElement.style.setProperty('--accent-border',h2r(CONFIG.accentColor,0.3));
+
+document.getElementById('brand-line1').textContent=CONFIG.serverLine1;
+document.getElementById('brand-line2').textContent=CONFIG.serverLine2;
+document.getElementById('brand-logo').src=CONFIG.logoSrc;
+
+if(CONFIG.backgroundType==='video'){
+  const v=document.getElementById('bg-video');v.src=CONFIG.videoSrc;v.style.display='block';
+}else{
+  const ss=document.getElementById('bg-slideshow');
+  CONFIG.slides.forEach((s,i)=>{const d=document.createElement('div');d.className='slide'+(i===0?' active':'');d.style.backgroundImage=`url('${s}')`;ss.appendChild(d);});
+  if(CONFIG.slides.length>1){let c=0;setInterval(()=>{const sl=ss.querySelectorAll('.slide');sl[c].classList.remove('active');c=(c+1)%sl.length;sl[c].classList.add('active');},CONFIG.slideInterval);}
+}
+
+document.getElementById('socials').innerHTML='';
+CONFIG.socials.filter(s=>s.enabled).forEach(s=>{
+  const a=document.createElement('a');
+  a.className='soc-btn'+(s.label?'':' icon-only');
+  a.href=s.url; a.target='_blank';
+  // determine FA family: fa-brands for brand icons, fa-solid for everything else
+  const brands=new Set(['fa-discord','fa-tiktok','fa-twitch','fa-youtube','fa-instagram','fa-twitter','fa-x-twitter','fa-steam','fa-reddit','fa-github','fa-facebook','fa-linkedin','fa-snapchat','fa-spotify','fa-patreon','fa-kickstarter','fa-paypal']);
+  const family = brands.has(s.icon) ? 'fa-brands' : 'fa-solid';
+  const iconEl=`<i class="${family} ${s.icon}"></i>`;
+  a.innerHTML = s.label ? iconEl+s.label : iconEl;
+  document.getElementById('socials').appendChild(a);
+});
+
+const tabIcons={
+  updates:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="23 4 23 10 17 10"/><path d="M20.49 9A9 9 0 1 1 5.64 5.64L1 10"/></svg>`,
+  team:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  rules:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  commands:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+  keyboard:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>`,
+};
+const tabsEl=document.getElementById('tabs-wrap');
+const enabledTabs=Object.entries(CONFIG.tabs).filter(([,v])=>v.enabled);
+let activeTab=null;
+enabledTabs.forEach(([key,cfg],i)=>{
+  const btn=document.createElement('button');
+  btn.className='tab-btn'+(i===0?' active':'');
+  btn.dataset.tab=key;
+  btn.innerHTML=(tabIcons[cfg.icon]||'')+cfg.label;
+const panelWidths = { changelog:'720px', staff:'300px', rules:'720px', commands:'720px', keyboard:'720px' };
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-'+key).classList.add('active');
+    document.getElementById('content-panel').style.width = panelWidths[key] || '720px';
+  });
+  tabsEl.appendChild(btn);
+  if(i===0)activeTab=key;
+});
+if(activeTab){
+  document.getElementById('panel-'+activeTab).classList.add('active');
+  const panelWidths2 = { changelog:'720px', staff:'300px', rules:'720px', commands:'720px', keyboard:'720px' };
+  document.getElementById('content-panel').style.width = panelWidths2[activeTab] || '720px';
+}
+
+const clEl=document.getElementById('changelog-list');
+CONFIG.changelog.forEach(e=>{clEl.innerHTML+=`<div class="cl-card"><div class="cl-head"><div class="cl-title">${e.title}</div><div class="cl-date">${e.date}</div></div><div class="cl-tag">${e.tag}</div><div class="cl-desc">${e.description}</div></div>`;});
+
+const track=document.getElementById('staff-track');
+const dotsEl=document.getElementById('staff-dots');
+let staffIdx=0,staffTimer=null;
+CONFIG.staff.forEach((s,i)=>{
+  const init=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const av=s.image?`<img class="staff-big-avatar" src="${s.image}" alt="" style="object-position:${s.imagePosition||'center top'}">`:`<div class="staff-big-initials">${init}</div>`;
+  const lk=s.link?`<a class="staff-slide-link" href="${s.link}" target="_blank">View Profile</a>`:'';
+  const bio=s.bio?`<div class="staff-slide-bio">${s.bio}</div>`:'';
+  const slide=document.createElement('div');slide.className='staff-slide';
+  slide.innerHTML=`${av}<div class="staff-slide-name">${s.name}</div><div class="staff-slide-role">${s.role}</div>${bio}${lk}`;
+  track.appendChild(slide);
+  const dot=document.createElement('div');dot.className='sdot'+(i===0?' active':'');
+  dot.addEventListener('click',()=>goStaff(i));dotsEl.appendChild(dot);
+});
+function goStaff(idx){staffIdx=idx;track.style.transform=`translateX(-${idx*100}%)`;document.querySelectorAll('.sdot').forEach((d,i)=>d.classList.toggle('active',i===idx));resetStaffTimer();}
+function resetStaffTimer(){if(staffTimer)clearInterval(staffTimer);staffTimer=setInterval(()=>goStaff((staffIdx+1)%CONFIG.staff.length),4000);}
+document.getElementById('snav-prev').addEventListener('click',()=>goStaff((staffIdx-1+CONFIG.staff.length)%CONFIG.staff.length));
+document.getElementById('snav-next').addEventListener('click',()=>goStaff((staffIdx+1)%CONFIG.staff.length));
+resetStaffTimer();
+
+const rlEl=document.getElementById('rules-list');
+CONFIG.rules.forEach((r,i)=>{rlEl.innerHTML+=`<div class="rule-item"><div class="rule-num">${i+1}</div><div><div class="rule-title">${r.title}</div><div class="rule-desc">${r.description}</div></div></div>`;});
+
+const cmdEl=document.getElementById('commands-list');
+CONFIG.commands.forEach(c=>{cmdEl.innerHTML+=`<div class="cl-card"><div class="cl-head"><div class="cl-title" style="font-family:monospace;font-size:13px;letter-spacing:0.03em;">${c.command}</div></div><div class="cl-desc">${c.description}</div></div>`;});
+
+// keyboard — top row keys get extra top margin so their tooltip has room above the panel
+const kbW=document.getElementById('keyboard-wrap');
+const rows=[
+  ['ESC','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'],
+  ['`','1','2','3','4','5','6','7','8','9','0','-','=','BKSP'],
+  ['TAB','Q','W','E','R','T','Y','U','I','O','P','[',']','\\'],
+  ['CAPS','A','S','D','F','G','H','J','K','L',';',"'",'ENTER'],
+  ['SHIFT','Z','X','C','V','B','N','M',',','.','/',  'SHIFT'],
+  ['CTRL','WIN','ALT','SPACE','ALT','FN','CTRL'],
+];
+const wideK=new Set(['BKSP','TAB','CAPS','ENTER','SHIFT','CTRL','WIN','ALT','FN']);
+rows.forEach((row,ri)=>{
+  const rowEl=document.createElement('div');rowEl.className='kb-row';
+  // first row: push down slightly so tooltip has room to appear above the panel top
+  if(ri===0) rowEl.style.marginTop='8px';
+  row.forEach(k=>{
+    const el=document.createElement('div');el.className='key';
+    if(wideK.has(k))el.classList.add('wide');
+    if(k==='SPACE')el.classList.add('widest');
+    el.textContent=k;
+    const bind=CONFIG.keybinds[k];
+    if(bind){
+      el.classList.add('bound');
+      const t=document.createElement('div');t.className='key-tooltip';t.textContent=bind;
+      el.appendChild(t);
+    }
+    rowEl.appendChild(el);
+  });
+  kbW.appendChild(rowEl);
+});
+
+// music — playlist
+const mp=CONFIG.music;
+if(mp.enabled && mp.tracks && mp.tracks.length){
+  document.getElementById('music-player').classList.add('visible');
+  const audio=document.getElementById('audio-el');
+  audio.volume=mp.volume;
+  document.getElementById('vol-slider').value=mp.volume;
+
+  // build playlist, optionally shuffle
+  let playlist=[...mp.tracks];
+  if(mp.shuffle) playlist.sort(()=>Math.random()-0.5);
+  let trackIdx=0;
+
+  const fmt=s=>{s=Math.floor(s||0);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
+
+  function loadTrack(idx){
+    trackIdx=idx;
+    const t=playlist[trackIdx];
+    audio.pause();
+    audio.src=t.src;
+    audio.load();
+    document.getElementById('music-track').textContent=t.trackName;
+    document.getElementById('music-artist').textContent=t.artist;
+    document.getElementById('music-seek').value=0;
+    document.getElementById('t-cur').textContent='0:00';
+    document.getElementById('t-dur').textContent='0:00';
+    audio.play().catch(()=>{});
+    document.getElementById('icon-play').style.display='none';
+    document.getElementById('icon-pause').style.display='';
+  }
+
+  // auto advance to next track, with error fallback
+  audio.addEventListener('ended',()=>loadTrack((trackIdx+1)%playlist.length));
+  audio.addEventListener('error',()=>{ setTimeout(()=>loadTrack((trackIdx+1)%playlist.length), 500); });
+
+  audio.addEventListener('timeupdate',()=>{
+    if(!audio.duration)return;
+    document.getElementById('music-seek').value=(audio.currentTime/audio.duration)*100;
+    document.getElementById('t-cur').textContent=fmt(audio.currentTime);
+    document.getElementById('t-dur').textContent=fmt(audio.duration);
+  });
+
+  document.getElementById('music-seek').addEventListener('input',e=>{if(audio.duration)audio.currentTime=(e.target.value/100)*audio.duration;});
+
+  document.getElementById('mc-play').addEventListener('click',()=>{
+    audio.paused?audio.play():audio.pause();
+    document.getElementById('icon-play').style.display=audio.paused?'':'none';
+    document.getElementById('icon-pause').style.display=audio.paused?'none':'';
+  });
+
+  // back: if more than 3s in, restart track; otherwise go to previous
+  document.getElementById('mc-back').addEventListener('click',()=>{
+    if(audio.currentTime>3){ audio.currentTime=0; }
+    else { loadTrack((trackIdx-1+playlist.length)%playlist.length); }
+  });
+
+  // forward: next track
+  document.getElementById('mc-fwd').addEventListener('click',()=>loadTrack((trackIdx+1)%playlist.length));
+
+  let muted=false;
+  document.getElementById('mute-btn').addEventListener('click',()=>{
+    muted=!muted; audio.muted=muted;
+    document.getElementById('vol-on').style.display=muted?'none':'';
+    document.getElementById('vol-off').style.display=muted?'':'none';
+    document.getElementById('mute-btn').classList.toggle('muted',muted);
+  });
+  document.getElementById('vol-slider').addEventListener('input',e=>{audio.volume=parseFloat(e.target.value);});
+
+  // load first track
+  loadTrack(0);
+}
+
+const msgs=CONFIG.loadingMessages;
+document.getElementById('loading-label').innerHTML=msgs[Math.floor(Math.random()*msgs.length)];
+const statuses=['Connecting to server...','Loading resources...','Syncing player data...','Almost there...'];
+let fakeRunning=true;
+window.addEventListener('message',e=>{
+  if(e.data&&typeof e.data.loadFraction!=='undefined'){
+    if(fakeRunning){ fakeRunning=false; clearInterval(ft); }
+    const pct=Math.round(e.data.loadFraction*100);
+    document.getElementById('progress-fill').style.width=pct+'%';
+    document.getElementById('progress-pct').textContent=pct+'%';
+    document.getElementById('progress-status').textContent=statuses[Math.min(Math.floor(e.data.loadFraction*statuses.length),statuses.length-1)];
+  }
+});
+let f=0;const ft=setInterval(()=>{if(!fakeRunning)return;f+=Math.random()*1.6;if(f>=100){f=100;clearInterval(ft);}document.getElementById('progress-fill').style.width=f.toFixed(1)+'%';document.getElementById('progress-pct').textContent=Math.round(f)+'%';},220);
+</script>
+</body>
+</html>
