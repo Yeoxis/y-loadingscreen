@@ -49,7 +49,7 @@ y-loadingscreen/
 
 ## Configuration
 
-Everything is in the `CONFIG` block at the top of `index.html`. You do not need to touch anything else.
+Everything is in the `CONFIG` block of `index.html`. You do not need to touch anything else.
 
 | Option | Description |
 |--------|-------------|
