@@ -3,7 +3,7 @@ game 'gta5'
 
 description 'y-loadingscreen'
 author 'Yeox'
-version '1.0.0'
+version '1.0.1'
 
 loadscreen 'index.html'
 loadscreen_manual_shutdown 'yes'
